@@ -24,7 +24,13 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
+
 import java.io.BufferedReader;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -33,6 +39,7 @@ import java.net.MalformedURLException;
 import java.net.ProtocolException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -227,6 +234,9 @@ public class MainActivity extends AppCompatActivity
     }
 
 
+    /*
+        获取详细公交线路信息的子线程
+     */
     private void sendRequestWithHttpURLConnection(final String queryString){
         new Thread(new Runnable() {
             @Override
@@ -237,5 +247,111 @@ public class MainActivity extends AppCompatActivity
         }).start();
 
     }
+
+
+    /*
+    解析请求返回的公交详细信息，并将返回的信息存入到List<Map<String, Object>>中
+     */
+
+    public List resolveHtml(String htmlString) {
+        List<Map<String, Object>> list=new ArrayList<Map<String,Object>>();
+        Document document = Jsoup.parse(htmlString);
+
+        //将以“tr”开头的标签存入trs元素群中
+        Elements trs=document.select("tr");
+
+        int totalTrs=trs.size();
+        if(totalTrs>2){
+            for (int i = 0; i < totalTrs-2; i++) {
+                Elements tds=trs.get(i+2).select("td");
+                //获取每个tr标签中td的个数
+                int totalTds=tds.size();
+                //临时存放各个属性的map
+                Map<String,Object> map=new HashMap<String, Object>();
+
+                for (int j = 0; j < totalTds; j++) {
+                    switch (j) {
+                        case 0:
+                            map.put("station", tds.get(j).select("a").html().toString());
+                            System.out.println(tds.get(j).select("a").html().toString());
+                            break;
+                        case 1:
+                            map.put("id", tds.get(j).html().toString());
+                            System.out.println(tds.get(j).html().toString());
+
+                            break;
+                        case 2:
+                            map.put("carNumber", tds.get(j).html().toString());
+                            System.out.println(tds.get(j).html().toString());
+                            break;
+                        case 3:
+                            map.put("time", tds.get(j).html().toString());
+                            System.out.println(tds.get(j).html().toString());
+                            System.out.println("------------------------------------------------------------------------");
+                            break;
+                        default:
+                            break;
+                    }
+                }
+                list.add(map);
+            }
+        }
+
+
+        return list;
+
+    }
+
+    /*
+    获取用户输入线路号所查询到的所有线路信息
+     */
+
+    public  List queryRequest1(String lineName) {
+        URL get_url = null;
+        String responseHtml =null;
+        HttpURLConnection connection = null;
+        try {
+            get_url = new URL(URL_LINK);
+            Log.d("debug",get_url.toString());
+            connection = (HttpURLConnection) get_url.openConnection();
+
+            connection.setRequestMethod("POST");
+            DataOutputStream out = new DataOutputStream(connection.getOutputStream());
+            out.writeBytes("ctl00$MainContent$SearchLine=搜索" +
+                    "&__VIEWSTATEGENERATOR=964EC381" +
+                    "&__VIEWSTATE=/wEPDwUJNDk3MjU2MjgyD2QWAmYPZBYCAgMPZBYCAgEPZBYCAgYPDxYCHgdWaXNpYmxlaGRkZArYd9NZeb6lYhNOScqHVvOmnKWkIejcJ7J2157Nz6l1" +
+                    "&__EVENTVALIDATION=/wEWAwL5m9CTDgL88Oh8AqX89aoKFjHWxIvicIW2NoJRKPFu7zDvdWiw74UWlUePz1dAXk4=" +
+                    "&ctl00$MainContent$LineName="+lineName);
+            connection.setConnectTimeout(8000);
+            connection.setReadTimeout(8000);
+            InputStream in = connection.getInputStream();
+            BufferedReader reader = new BufferedReader(new InputStreamReader(in));
+            StringBuilder response = new StringBuilder();
+            String line;
+            while((line = reader.readLine()) != null){
+                response.append(line);
+            }
+            Log.d("debug",responseHtml=response.toString());
+            Message message =  new Message();
+            message.what = SHOW_RESPONSE;
+            //将服务器返回的结果存放到Message中
+            message.obj = response.toString();
+            handler.sendMessage(message);
+
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+        } catch (ProtocolException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }finally {
+            if(connection != null){
+                connection.disconnect();
+            }
+        }
+        return responseHtml;
+
+    }
+
 
 }

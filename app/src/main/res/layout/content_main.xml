@@ -46,4 +46,11 @@
         android:layout_alignParentLeft="true"
         android:layout_alignParentStart="true" />
 
+    <ExpandableListView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@+id/search_button"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true" />
+
 </RelativeLayout>
