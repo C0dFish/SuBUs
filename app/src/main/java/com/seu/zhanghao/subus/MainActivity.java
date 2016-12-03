@@ -248,6 +248,19 @@ public class MainActivity extends AppCompatActivity
 
     }
 
+    /*
+       获取详细公交线路列表的子线程
+     */
+    private void sendLineRequest(final String lineNumber){
+       new Thread(new Runnable() {
+           @Override
+           public void run() {
+               Log.d("debug","sendLineRequest");
+               doPost(lineNumber);
+           }
+       }) .start();
+    }
+
 
     /*
     解析请求返回的公交详细信息，并将返回的信息存入到List<Map<String, Object>>中
@@ -303,10 +316,10 @@ public class MainActivity extends AppCompatActivity
     }
 
     /*
-    获取用户输入线路号所查询到的所有线路信息
+    获取用户输入线路号所查询到的所有线路信息实现
      */
 
-    public  List queryRequest1(String lineName) {
+    public  List doPost(String lineName) {
         URL get_url = null;
         String responseHtml =null;
         HttpURLConnection connection = null;
@@ -351,6 +364,48 @@ public class MainActivity extends AppCompatActivity
         }
         return responseHtml;
 
+    }
+
+    public List resolveLineHtml(String responseHtml) {
+        List<Map<String, Object>> list=new ArrayList<Map<String,Object>>();
+        Document document = Jsoup.parse(responseHtml);
+
+        Elements trs=document.select("tr");
+
+        int totalTrs=trs.size();
+        if(totalTrs>2){
+            for (int i = 0; i <2; i++) {
+                Elements tds=trs.get(i+2).select("td");
+                //获取每个tr标签中td的个数
+                int totalTds=tds.size();
+                //临时存放各个属性的map
+                Map<String,Object> map=new HashMap<String, Object>();
+                String subHerf;
+                String repDirection;
+                //	String
+                for (int j = 0; j < totalTds; j++) {
+                    switch (j) {
+                        case 0:
+                            subHerf=tds.get(j).select("a").attr("href").toString();
+                            subHerf=subHerf.substring(13);
+                            map.put("lineLink",subHerf);
+                            System.out.println(subHerf);
+                            break;
+                        case 1:
+                            repDirection=tds.get(j).html().toString();
+                            repDirection=repDirection.replace("=&gt;", "→");
+                            map.put("direction", repDirection);
+                            System.out.println(repDirection);
+                            break;
+                        default:
+                            break;
+                    }
+                }
+                list.add(map);
+            }
+        }
+
+        return list;
     }
 
 
