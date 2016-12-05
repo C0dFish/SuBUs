@@ -319,7 +319,8 @@ public class MainActivity extends AppCompatActivity
     获取用户输入线路号所查询到的所有线路信息实现
      */
 
-    public  List doPost(String lineName) {
+    public  String doPost(String lineName) {
+
         URL get_url = null;
         String responseHtml =null;
         HttpURLConnection connection = null;
